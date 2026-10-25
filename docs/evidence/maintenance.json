@@ -1,0 +1,61 @@
+{
+  "scenario": "maintenance",
+  "tested_at": "2026-10-25T22:57:41.549865+00:00",
+  "question": "What is included in routine AC maintenance?",
+  "response": {
+    "request_id": "portfolio-maintenance-ffd0d85715ee",
+    "status": "answered",
+    "decision": {
+      "provider": "laya-local",
+      "intent": "maintenance",
+      "confidence": 0.6997,
+      "hazard_probability": 0.0598,
+      "human_probability": 0.0951,
+      "hazard_flag": false,
+      "human_flag": false,
+      "booking_flag": false,
+      "needs_review": false,
+      "routing_model": "english"
+    },
+    "answer": "Routine AC maintenance typically includes:\n- Replacing or cleaning air filters\n- Visual inspection by a professional\n- Checking thermostat settings\n- Ensuring proper airflow around vents [source.md]",
+    "sources": [
+      "appointments.md",
+      "maintenance.md",
+      "pricing.md",
+      "safety.md"
+    ],
+    "retrieved": [
+      {
+        "id": "734700473560389157",
+        "score": 0.61,
+        "source": "maintenance.md",
+        "chunk": 0,
+        "text": "# AC maintenance — demo knowledge\n\nRoutine preventative maintenance may include replacing or cleaning suitable air filters, visual inspection by a professional, checking thermostat settings, and checking airflow around vents.\nHomeowners can check whether the thermostat is set to cooling and whether the filter needs replacement, following manufacturer guidance. Do not work on high-voltage components or refrigerant lines yourself.\nDuring a visit, licensed HVAC professionals may inspect electrical connections, condensate drainage, coils and refrigerant systems. Services vary by equipment."
+      },
+      {
+        "id": "411597797651869156",
+        "score": 0.3578,
+        "source": "safety.md",
+        "chunk": 0,
+        "text": "# HVAC safety policy\n\nIf a customer reports gas odor or suspected gas leak, smoke, fire, sparking equipment, carbon monoxide alarm, or an immediate safety hazard, do not attempt remote troubleshooting and do not book an automated appointment. Recommend seeking appropriate local emergency assistance and qualified professionals, with human review.\nA non-cooling AC unit alone is not necessarily an emergency. Specific danger signs take priority over routine diagnostic advice."
+      },
+      {
+        "id": "1041706808958806336",
+        "score": 0.3231,
+        "source": "pricing.md",
+        "chunk": 0,
+        "text": "# Pricing — demonstration only\n\nThis demo does not contain real current HVAC prices or a guaranteed price list.\nService prices depend on the location, equipment, service needed and on-site inspection.\nA human dispatcher must provide a real quote. This RAG application must never invent a dollar amount or a discounted offer."
+      },
+      {
+        "id": "232824063047542191",
+        "score": 0.3221,
+        "source": "appointments.md",
+        "chunk": 0,
+        "text": "# HVAC appointments — demo policies\n\nAppointments are requests until a human dispatcher confirms a technician and time.\nThis demo has NO real booking availability API. Do not promise or confirm appointments.\nRequests can include preferred day, time window, address/ZIP code, and customer contact information.\nA dispatcher reviews each request and confirms through a separate process."
+      }
+    ],
+    "reason": "grounded_response"
+  },
+  "mailpit_verified": true,
+  "mailpit_text": "Request ID: portfolio-maintenance-ffd0d85715ee\r\nStatus: answered\r\nReason: grounded_response\r\n\r\nAnswer:\r\nRoutine AC maintenance typically includes:\r\n- Replacing or cleaning air filters\r\n- Visual inspection by a professional\r\n- Checking thermostat settings\r\n- Ensuring proper airflow around vents [source.md]\r\n\r\nSources: appointments.md, maintenance.md, pricing.md, safety.md\r\n\r\nLocal POC only. An email notification is not an appointment confirmation.\r\n"
+}

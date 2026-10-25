@@ -1,0 +1,26 @@
+{
+  "tested_at": "2026-10-25T23:11:58.911265+00:00",
+  "question": "I smell gas near the furnace!",
+  "response": {
+    "request_id": "consolidated-hazard-b1d4973c2a80",
+    "status": "needs_review",
+    "decision": {
+      "provider": "laya-local",
+      "intent": "complaint",
+      "confidence": 0.6206,
+      "hazard_probability": 0.7725,
+      "human_probability": 0.0384,
+      "hazard_flag": true,
+      "human_flag": false,
+      "booking_flag": false,
+      "needs_review": true,
+      "routing_model": "english"
+    },
+    "answer": "This may describe a safety hazard. Contact appropriate local emergency services or a qualified professional. No appointment has been made.",
+    "sources": [],
+    "retrieved": [],
+    "reason": "potential_hazard"
+  },
+  "mailpit_verified": true,
+  "mailpit_text": "Request ID: consolidated-hazard-b1d4973c2a80\r\nStatus: needs_review\r\nReason: potential_hazard\r\n\r\nAnswer:\r\nThis may describe a safety hazard. Contact appropriate local emergency services or a qualified professional. No appointment has been made.\r\n\r\nSources: \r\n\r\nLocal POC only. An email notification is not an appointment confirmation.\r\n"
+}

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Local AI RAG Lab</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#e7ebf7;background:#0c1220}*{box-sizing:border-box}body{margin:0}
+main{max-width:980px;margin:auto;padding:42px 22px 70px}h1{font-size:32px;margin:10px 0}p{color:#a8b5cd;line-height:1.65}
+section{background:#172035;border:1px solid #2a3855;border-radius:16px;padding:22px;margin:20px 0}
+label{display:block;color:#becbe0;font-weight:600;margin:12px 0 7px}textarea,input,select,button{font:inherit;border-radius:8px}
+textarea,input,select{width:100%;padding:12px;border:1px solid #3d4c66;background:#0e1828;color:#f3f6fb}
+textarea{min-height:110px;resize:vertical}button{padding:11px 20px;border:0;background:#608cf8;color:#071328;cursor:pointer;font-weight:700}button:disabled{opacity:.5;cursor:progress}
+.flex{display:grid;grid-template-columns:1fr 1fr;gap:16px}.small{font-size:13px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0e1828;padding:14px;border-radius:9px;font-size:12px;max-height:400px;overflow:auto}
+mark{color:#8cdbbd;background:transparent}.status{display:inline-block;padding:5px 12px;border-radius:20px;background:#2d3e5c;font-weight:600}
+#answer{font-size:17px;color:#fff;white-space:pre-wrap;line-height:1.7}details{margin-top:16px;color:#a8b5cd}summary{cursor:pointer}.hint{font-size:13px;color:#b2bdcb}
+@media(max-width:660px){.flex{grid-template-columns:1fr}h1{font-size:26px}}
+</style></head><body><main>
+<small>LOCAL PROOF OF CONCEPT · QDRANT + LAYA + OLLAMA + N8N + MAILPIT</small><h1>AI Knowledge & Support Lab</h1>
+<p>Ask a question about the fictional HVAC company. Laya evaluates intent and review signals, Qdrant retrieves relevant excerpts, and Qwen writes a grounded answer. In n8n mode, the workflow also routes a notification into Mailpit.</p>
+<section><div class="flex"><div><label for="token">Local demo token</label><input id="token" type="password" autocomplete="off" placeholder="Enter WORKFLOW_TOKEN from .env"><span class="hint">Must match WORKFLOW_TOKEN in .env</span></div>
+<div><label for="mode">Run through</label><select id="mode"><option value="/api/via-n8n">n8n + Mailpit (full workflow)</option><option value="/api/process">FastAPI only (no email)</option></select></div></div>
+<label for="question">Question</label><textarea id="question">What is included in routine AC maintenance?</textarea>
+<p class="small">Try: <a href="#" data-q="Do you serve ZIP 90210?">service area</a> · <a href="#" data-q="Can you book a technician tomorrow morning?">booking review</a> · <a href="#" data-q="I smell gas near the furnace!">safety escalation</a></p>
+<button id="go">Run AI Workflow</button> <span id="progress" class="hint"></span></section>
+<section id="results" hidden><p>Status: <span id="state" class="status"></span></p><h2>Response</h2><div id="answer"></div><p id="sources" class="small"></p>
+<details><summary>Decision and retrieved passages (diagnostics)</summary><pre id="json"></pre></details></section>
+<p class="small">Monitor: <a href="/docs">FastAPI docs</a> · <a href="http://localhost:5678" target="_blank" rel="noreferrer">n8n</a> · <a href="http://localhost:8025" target="_blank" rel="noreferrer">Mailpit</a>. All customer data and company details are fictional demo inputs.</p>
+<script>
+for(const a of document.querySelectorAll('[data-q]'))a.addEventListener('click',e=>{e.preventDefault();document.getElementById('question').value=a.dataset.q});
+document.getElementById('go').addEventListener('click',async()=>{
+const go=document.getElementById('go'),out=document.getElementById('results'),p=document.getElementById('progress');go.disabled=true;p.textContent='Running models and workflow…';out.hidden=true;
+try{const r=await fetch(document.getElementById('mode').value,{method:'POST',headers:{'Content-Type':'application/json','X-Demo-Token':document.getElementById('token').value},body:JSON.stringify({message:document.getElementById('question').value})});const body=await r.json();if(!r.ok)throw new Error(JSON.stringify(body));
+document.getElementById('state').textContent=body.status||'unknown';document.getElementById('answer').textContent=body.answer||'(no answer)';document.getElementById('sources').textContent='Sources: '+((body.sources||[]).join(', ')||'none');document.getElementById('json').textContent=JSON.stringify(body,null,2);out.hidden=false;
+}catch(e){p.textContent='Error: '+e.message;return}finally{go.disabled=false}p.textContent='Complete';});
+</script></main></body></html>

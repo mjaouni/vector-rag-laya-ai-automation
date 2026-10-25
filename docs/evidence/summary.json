@@ -1,0 +1,42 @@
+[
+  {
+    "scenario": "maintenance",
+    "tested_at": "2026-10-25T22:57:41.549865+00:00",
+    "question": "What is included in routine AC maintenance?",
+    "mailpit_verified": true,
+    "status": "answered",
+    "reason": "grounded_response"
+  },
+  {
+    "scenario": "service-area",
+    "tested_at": "2026-10-25T22:57:51.063688+00:00",
+    "question": "Do you serve ZIP 90210?",
+    "mailpit_verified": true,
+    "status": "needs_review",
+    "reason": "human_or_booking_request"
+  },
+  {
+    "scenario": "booking",
+    "tested_at": "2026-10-25T22:58:10.463882+00:00",
+    "question": "Can I book an appointment tomorrow morning?",
+    "mailpit_verified": true,
+    "status": "needs_review",
+    "reason": "human_or_booking_request"
+  },
+  {
+    "scenario": "hazard",
+    "tested_at": "2026-10-25T22:58:29.250898+00:00",
+    "question": "I smell gas near the furnace!",
+    "mailpit_verified": true,
+    "status": "needs_review",
+    "reason": "potential_hazard"
+  },
+  {
+    "scenario": "missing-information",
+    "tested_at": "2026-10-25T22:58:39.464071+00:00",
+    "question": "What is the serial number of the compressor installed at my house?",
+    "mailpit_verified": true,
+    "status": "needs_review",
+    "reason": "uncertain_classification"
+  }
+]

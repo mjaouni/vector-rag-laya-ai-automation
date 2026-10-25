@@ -1,0 +1,2 @@
+# Optional large downloads: PyTorch/Transformers and Laya weights (first inference).
+laya>=0.4,<0.5

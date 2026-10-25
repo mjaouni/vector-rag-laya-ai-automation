@@ -1,0 +1,53 @@
+{
+  "scenario": "service-area",
+  "tested_at": "2026-10-25T22:57:51.063688+00:00",
+  "question": "Do you serve ZIP 90210?",
+  "response": {
+    "request_id": "portfolio-service-area-1a10a7872593",
+    "status": "needs_review",
+    "decision": {
+      "provider": "laya-local",
+      "intent": "booking",
+      "confidence": 0.2443,
+      "hazard_probability": 0.0917,
+      "human_probability": 0.3553,
+      "hazard_flag": false,
+      "human_flag": false,
+      "booking_flag": true,
+      "needs_review": true,
+      "routing_model": "english"
+    },
+    "answer": "I've identified your request for an appointment or human assistance. No booking has been made; a person should review it.",
+    "sources": [
+      "appointments.md",
+      "pricing.md",
+      "service_area.md"
+    ],
+    "retrieved": [
+      {
+        "id": "756472128362167774",
+        "score": 0.4257,
+        "source": "service_area.md",
+        "chunk": 0,
+        "text": "# Service area — fictional example\n\nFor demonstration only, the fictional HVAC service accepts inquiries from postal codes 90210, 90024 and 90025 in the Los Angeles area. Submitting an inquiry does not guarantee service availability.\nCustomers outside those ZIP codes should ask a dispatcher to check coverage. This information is sample data, not a real operating business."
+      },
+      {
+        "id": "232824063047542191",
+        "score": 0.2489,
+        "source": "appointments.md",
+        "chunk": 0,
+        "text": "# HVAC appointments — demo policies\n\nAppointments are requests until a human dispatcher confirms a technician and time.\nThis demo has NO real booking availability API. Do not promise or confirm appointments.\nRequests can include preferred day, time window, address/ZIP code, and customer contact information.\nA dispatcher reviews each request and confirms through a separate process."
+      },
+      {
+        "id": "1041706808958806336",
+        "score": 0.2238,
+        "source": "pricing.md",
+        "chunk": 0,
+        "text": "# Pricing — demonstration only\n\nThis demo does not contain real current HVAC prices or a guaranteed price list.\nService prices depend on the location, equipment, service needed and on-site inspection.\nA human dispatcher must provide a real quote. This RAG application must never invent a dollar amount or a discounted offer."
+      }
+    ],
+    "reason": "human_or_booking_request"
+  },
+  "mailpit_verified": true,
+  "mailpit_text": "Request ID: portfolio-service-area-1a10a7872593\r\nStatus: needs_review\r\nReason: human_or_booking_request\r\n\r\nAnswer:\r\nI've identified your request for an appointment or human assistance. No booking has been made; a person should review it.\r\n\r\nSources: appointments.md, pricing.md, service_area.md\r\n\r\nLocal POC only. An email notification is not an appointment confirmation.\r\n"
+}

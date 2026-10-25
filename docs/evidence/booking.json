@@ -1,0 +1,37 @@
+{
+  "scenario": "booking",
+  "tested_at": "2026-10-25T22:58:10.463882+00:00",
+  "question": "Can I book an appointment tomorrow morning?",
+  "response": {
+    "request_id": "portfolio-booking-0427705ffae8",
+    "status": "needs_review",
+    "decision": {
+      "provider": "laya-local",
+      "intent": "booking",
+      "confidence": 0.9861,
+      "hazard_probability": 0.0058,
+      "human_probability": 0.6468,
+      "hazard_flag": false,
+      "human_flag": false,
+      "booking_flag": true,
+      "needs_review": true,
+      "routing_model": "english"
+    },
+    "answer": "I've identified your request for an appointment or human assistance. No booking has been made; a person should review it.",
+    "sources": [
+      "appointments.md"
+    ],
+    "retrieved": [
+      {
+        "id": "232824063047542191",
+        "score": 0.3281,
+        "source": "appointments.md",
+        "chunk": 0,
+        "text": "# HVAC appointments — demo policies\n\nAppointments are requests until a human dispatcher confirms a technician and time.\nThis demo has NO real booking availability API. Do not promise or confirm appointments.\nRequests can include preferred day, time window, address/ZIP code, and customer contact information.\nA dispatcher reviews each request and confirms through a separate process."
+      }
+    ],
+    "reason": "human_or_booking_request"
+  },
+  "mailpit_verified": true,
+  "mailpit_text": "Request ID: portfolio-booking-0427705ffae8\r\nStatus: needs_review\r\nReason: human_or_booking_request\r\n\r\nAnswer:\r\nI've identified your request for an appointment or human assistance. No booking has been made; a person should review it.\r\n\r\nSources: appointments.md\r\n\r\nLocal POC only. An email notification is not an appointment confirmation.\r\n"
+}
