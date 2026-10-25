@@ -1,139 +1,240 @@
 # Vector RAG + Laya AI Automation
 
-A local AI engineering proof of concept that answers questions from a fictional HVAC knowledge base and routes answer/review notifications through n8n into Mailpit. It combines semantic search, a specialized decision model, local LLM inference, deterministic review policy, and event-driven automation in one repository.
-
-No paid inference API is required. No action books an appointment or emails a real customer.
-
-## What it demonstrates
-
-- **RAG:** MiniLM embeds Markdown passages and questions; embedded Qdrant retrieves relevant evidence for Qwen2.5:7b.
-- **Decision models:** Laya returns intent and hazard/human signals separately from answer generation.
-- **Safe workflow boundaries:** deterministic rules route booking, hazard, uncertainty, and unavailable-model cases to review.
-- **Local inference:** Ollama serves Qwen on Windows; Laya and MiniLM run in Python.
-- **Automation:** n8n receives a webhook, calls FastAPI, branches on status, invokes notification, and returns the original result.
-- **Email testing:** Python sends operator notifications into Mailpit with request ID, status, answer, and sources.
-- **Reproducibility:** supporting-service Compose, PowerShell setup/start/stop/check scripts, sample documents, offline tests, CI, and technical documentation.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    U[Browser / optional Streamlit] --> A[FastAPI on Windows :8003]
-    A -->|full workflow| N[n8n Docker :5678]
-    N -->|process| A
-    A --> L[Laya decision model]
-    A --> E[MiniLM embeddings]
-    E --> Q[Embedded Qdrant]
-    A --> O[Ollama / Qwen2.5:7b :11434]
-    N --> R{Answer or review?}
-    R --> P[FastAPI notification + SQLite dedup]
-    P --> M[Mailpit Docker SMTP :1025 / UI :8025]
-    N -->|original AI result| U
-```
-
-The [architecture guide](docs/ARCHITECTURE.md) explains responsibilities, storage, networking, and tradeoffs; [request lifecycle](docs/HOW_IT_WORKS.md) includes the full sequence diagram.
-
-## Quick start — Windows
-
-Prerequisites: Python 3.12 (64-bit), Git, Docker Desktop with Linux containers, Ollama, internet for initial downloads, and enough storage/RAM for Qwen, Laya, and MiniLM. GPU is optional; CPU cold starts may be slow.
-
-```powershell
-git clone https://github.com/mjaouni/vector-rag-laya-ai-automation.git
-cd vector-rag-laya-ai-automation
-.\scripts\setup.ps1
-ollama pull qwen2.5:7b
-# Fresh machine only; reuse existing n8n/Mailpit if their ports are occupied:
-docker compose -f docker/compose.yaml up -d
-.\.venv\Scripts\python.exe scripts/doctor.py --require-model
-.\scripts\seed.ps1
-.\scripts\start.ps1 -OpenBrowser
-```
-
-Open n8n at <http://localhost:5678>, import [the workflow](n8n/rag-laya-mailpit.json), and select one Header Auth credential (`X-Demo-Token` = your `.env` `WORKFLOW_TOKEN`) in all three HTTP Request nodes. Save/publish it. Enter the same token into the browser at <http://localhost:8003> and submit:
+What happens inside this project when a customer asks:
 
 > What is included in routine AC maintenance?
 
-Inspect the generated response, decision/retrieval diagnostics, n8n execution, and Mailpit at <http://localhost:8025>. The full [Windows installation guide](docs/INSTALLATION_WINDOWS.md) covers exact settings, model downloads, credential setup, and optional Streamlit. Import is manual; automatic workflow provisioning is not a supported feature.
+Each technology has a different responsibility. **Laya** classifies what the customer wants, **MiniLM and Qdrant** find relevant knowledge, **Qwen** generates the answer, **FastAPI** enforces the application rules, and **n8n** automates the workflow. **Mailpit** captures the notification email locally.
 
-Embedded Qdrant permits one process per directory. Seed with the API stopped. Existing collections are preserved; use a new collection name to index changed documents/models.
+This walkthrough follows the real maintenance test. For installation and the broader technical overview, see the [project guide](docs/PROJECT_GUIDE.md).
 
-## Real demonstration and screenshots
+## Complete process flow
 
-The actual observed runs and their limitations are recorded in the [demonstration walkthrough](docs/DEMO_WALKTHROUGH.md) and [validation report](docs/VALIDATION.md). Screenshot provenance and captions are in the [screenshot index](docs/screenshots/README.md). All published captures use real running interfaces, with fictional demo input.
+```mermaid
+flowchart TD
+    C[Customer asks a question] --> W[n8n receives the message through FastAPI]
+    W --> L[Laya classifies intent and review signals]
+    L --> R[MiniLM and Qdrant retrieve knowledge]
+    R --> Q[Qwen2.5 generates an answer]
+    Q --> F[FastAPI returns answer and sources]
+    F --> N[n8n routes the result]
+    N --> M[FastAPI sends a notification to Mailpit]
+    M --> A[Application displays the returned answer]
+```
+
+For the maintenance question, the observed result was `intent: maintenance`, `status: answered`, and no review flag. Requests requiring review can return earlier without generating an answer.
+
+## Step 1 — The customer submits the question
+
+The customer opens the application and types:
+
+> What is included in routine AC maintenance?
 
 ![Running application home](docs/screenshots/application-home.png)
 
-*The application served by FastAPI, before submitting the maintenance question.*
+*The real application before submitting the maintenance question.*
+
+In full-workflow mode, the browser calls FastAPI's `/api/via-n8n` endpoint. FastAPI forwards the message to the configured n8n webhook:
+
+```http
+POST http://localhost:5678/webhook/rag-laya-intake
+Content-Type: application/json
+```
+
+```json
+{
+  "message": "What is included in routine AC maintenance?"
+}
+```
+
+n8n receives the message and sends it to FastAPI's `/api/process` endpoint for AI processing. At this stage, n8n coordinates the workflow; it does not answer the question itself.
+
+## Step 2 — Laya classifies the question
+
+FastAPI sends the customer's message to the locally running Laya model. Laya evaluates the primary intent and signals that might require human intervention.
+
+The actual test returned these decision fields:
+
+```json
+{
+  "provider": "laya-local",
+  "intent": "maintenance",
+  "confidence": 0.6997,
+  "hazard_probability": 0.0598,
+  "human_probability": 0.0951,
+  "needs_review": false
+}
+```
+
+This means:
+
+- The predicted intent is maintenance, with a model confidence score of approximately 70%.
+- No hazard or human-assistance signal crossed the configured review thresholds.
+- The application can proceed with the normal RAG answering process.
+
+The confidence score is a model estimate, not a guarantee of correctness. FastAPI applies deterministic policy checks alongside the model signals.
+
+**Why use Laya?** The same system must distinguish a maintenance question from a booking request or a potentially hazardous situation. Laya produces structured decision signals rather than writing the final answer.
+
+## Step 3 — MiniLM converts the question into a vector
+
+FastAPI uses MiniLM to turn the question into a numerical representation called an **embedding**.
+
+Conceptually:
+
+```text
+"What is included in routine AC maintenance?"
+                      ↓
+                    MiniLM
+                      ↓
+          [0.12, -0.28, 0.73, 0.09, ...]
+```
+
+*These numbers are illustrative, not values recorded from the test.*
+
+During initial seeding, the knowledge documents were also converted into embeddings and stored in Qdrant. The question and stored passages can therefore be compared by semantic meaning, rather than only by matching keywords.
+
+## Step 4 — Qdrant finds relevant knowledge
+
+Qdrant searches its vector collection for passages most similar to the question. In the successful test, it returned:
+
+| Document | Similarity score |
+|---|---:|
+| `maintenance.md` | 0.6100 |
+| `safety.md` | 0.3578 |
+| `pricing.md` | 0.3231 |
+| `appointments.md` | 0.3221 |
+
+The most relevant passage came from `maintenance.md`:
+
+> Routine preventative maintenance may include replacing or cleaning suitable air filters, visual inspection by a professional, checking thermostat settings, and checking airflow around vents.
+
+**Why Qdrant?** Instead of sending every company document to the LLM, the application retrieves a small selection of relevant passages. This improves efficiency and supplies evidence for the answer. Similarity scores measure vector similarity, not factual certainty.
+
+## Step 5 — Qwen2.5 generates the answer
+
+FastAPI sends the original question and retrieved passages to `qwen2.5:7b`, running locally through Ollama.
+
+Conceptually, Qwen receives:
+
+```text
+Question:
+What is included in routine AC maintenance?
+
+Retrieved knowledge:
+Routine preventative maintenance may include cleaning filters,
+professional visual inspection, checking thermostat settings and airflow.
+
+Instructions:
+Answer using the supplied knowledge.
+Do not invent unsupported details.
+```
+
+Qwen turns that context into a readable response. The actual answer was:
+
+> Routine AC maintenance typically includes:
+> - Replacing or cleaning air filters
+> - Visual inspection by a professional
+> - Checking thermostat settings
+> - Ensuring proper airflow around vents [source.md]
+
+This is the **generation** part of Retrieval-Augmented Generation (RAG).
 
 ![Real generated maintenance answer](docs/screenshots/application-answer.png)
 
-*Laya classified maintenance and Qwen generated a response. The visible `[source.md]` citation is an observed limitation; see the walkthrough.*
+*The real maintenance result, including the separately returned source filenames.*
+
+**Observed limitation:** Qwen generated the invalid citation `[source.md]`. The returned source metadata was correct, but the generated citation label was not validated. The screenshot and recorded response retain this issue exactly as observed.
+
+## Step 6 — FastAPI returns the result to n8n
+
+FastAPI packages the answer, decision, and sources into a structured response. This is an abbreviated version of the recorded result matching the screenshots:
+
+```json
+{
+  "request_id": "a05bcae3-3cbe-43b6-af7b-548ff0fa9430",
+  "status": "answered",
+  "decision": {
+    "intent": "maintenance",
+    "needs_review": false
+  },
+  "answer": "Routine AC maintenance typically includes...",
+  "sources": [
+    "appointments.md",
+    "maintenance.md",
+    "pricing.md",
+    "safety.md"
+  ],
+  "reason": "grounded_response"
+}
+```
+
+The complete response, including decision scores and retrieved passages, is in the [recorded maintenance evidence](docs/evidence/consolidated-maintenance.json).
+
+n8n does not need to interpret the answer's wording. It can route the workflow using a structured field such as `status`. The label `grounded_response` indicates that the RAG path ran; it does not independently verify every claim or citation.
+
+## Step 7 — n8n chooses the notification branch
+
+The workflow checks:
+
+```text
+Is status == "needs_review"?
+```
+
+For the maintenance question:
+
+```text
+status = answered
+        ↓
+Answer branch
+        ↓
+Send answer notification
+```
+
+Booking requests and hazardous situations route to review instead. No branch creates a real appointment.
 
 ![Imported n8n workflow](docs/screenshots/n8n-workflow.png)
 
-*The actual seven-node workflow in an isolated fresh n8n instance, using the consolidated backend on alternate validation ports.*
+*The real seven-node workflow showing the answer and review branches.*
+
+In this project, both notification branches call FastAPI's `/api/notify` endpoint. FastAPI then sends the email through SMTP; these are HTTP Request nodes, not direct n8n Send Email nodes.
+
+## Step 8 — Mailpit receives the email
+
+The test notification was successfully received by Mailpit. It included:
+
+| Email field | Recorded value |
+|---|---|
+| To | `reviewer@example.test` |
+| Subject | `[RAG demo] answered / a05bcae3-3cbe-43b6-af7b-548ff0fa9430` |
+| Status | `answered` |
+| Reason | `grounded_response` |
+| Answer | The generated maintenance response |
+| Sources | `appointments.md`, `maintenance.md`, `pricing.md`, `safety.md` |
 
 ![Captured answer email](docs/screenshots/mailpit-email.png)
 
-*Mailpit received the real test email with request ID, status, generated answer, and retrieved source list.*
+*The real captured email, with the same request ID as the application result.*
 
+Mailpit captures the notification locally so it can be inspected. It does not deliver a real email to an external customer. After notification succeeds, n8n returns the original processing result through FastAPI to the browser, where the customer reads the answer.
 
-## Technology choices
+The URLs above use the default local ports. These existing screenshots were captured using isolated validation ports; the [recorded walkthrough](docs/DEMO_WALKTHROUGH.md) explains that setup.
 
-| Technology | Role and reason |
-|---|---|
-| FastAPI / Pydantic | One typed HTTP backend and browser entry point |
-| Laya | Specialized structured decision signals, separate from text generation |
-| MiniLM / SentenceTransformers | Compact local semantic embeddings |
-| Qdrant embedded | Persistent cosine vector search without an extra server |
-| Ollama / Qwen2.5:7b | Local answer generation through a standard HTTP inference service |
-| n8n | Visible webhook orchestration and conditional routing |
-| Mailpit | Inspectable local SMTP capture without sending customer email |
-| SQLite | Small persistent notification deduplication ledger |
-| PowerShell / Docker Compose | Repeatable Windows setup and supporting-service lifecycle |
-| pytest / Ruff / GitHub Actions | Model-free regression checks and repository validation |
-| Streamlit (optional) | Alternate UI calling the same backend |
+## What if the customer asks something different?
 
-## Run and test
+| Customer message | Laya / application decision | Intended workflow |
+|---|---|---|
+| "What is AC maintenance?" | Routine knowledge question | RAG answer → notification |
+| "Can I book a technician tomorrow?" | Booking request | Human review → Mailpit; no booking |
+| "I smell gas near the furnace!" | Potential hazard | Safety response → review notification |
+| "What is today's exact repair price?" | Pricing question | Retrieve pricing policy; do not invent a price |
 
-```powershell
-.\scripts\test_api.ps1
-.\scripts\test_webhook.ps1
-.\scripts\test_mailpit.ps1
-.\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe -m ruff check api.py app.py cli.py service scripts tests
-.\.venv\Scripts\python.exe scripts/validate_repo.py
-.\scripts\stop.ps1
-```
+Model predictions can vary. See the [tested scenario results](docs/DEMO_WALKTHROUGH.md#scenario-results) for observed outcomes, including the service-area question that unexpectedly escalated to review.
 
-The first command bypasses n8n/email. The second exercises the full published workflow. The SMTP check verifies local delivery separately. Offline unit tests need no model weights or Docker services; CI installs [requirements-ci.txt](requirements-ci.txt).
+## The core idea
 
-For foreground Uvicorn and graceful Ctrl+C shutdown, test-webhook mode, startup reuse rules, and safe Compose shutdown, see [running and testing](docs/RUNNING_AND_TESTING.md).
+**Laya** supplies structured decision signals. **MiniLM and Qdrant** find what the knowledge base contains. **Qwen** explains that knowledge in natural language. **FastAPI** enforces application rules. **n8n** coordinates the next steps, and **Mailpit** makes email notifications inspectable.
 
-## Documentation and project layout
+Together, they demonstrate RAG integrated with AI decisions and business workflow automation.
 
-| Path / guide | Contents |
-|---|---|
-| `api.py`, `web.html`, `app.py`, `cli.py` | Canonical HTTP/browser, optional Streamlit, ingestion entry points |
-| `service/` | Configuration, decisions, retrieval, generation, policy, notifications |
-| `sample_docs/` | Seven fictional HVAC knowledge documents |
-| `n8n/` | Sanitized importable workflow and import README |
-| `docker/` | Fresh-install n8n/Mailpit Compose template |
-| `scripts/`, `tests/`, `.github/workflows/` | Windows lifecycle, diagnostic/test tools, offline suite, CI |
-| [Investigation](docs/INVESTIGATION.md) | Existing setup and reasons for consolidation changes |
-| [Installation](docs/INSTALLATION_WINDOWS.md) / [Running](docs/RUNNING_AND_TESTING.md) | Clone, configure, start, test, stop |
-| [n8n](docs/N8N_INTEGRATION.md) / [Mailpit](docs/MAILPIT_INTEGRATION.md) | Node reference, credentials, webhooks, SMTP lifecycle |
-| [API reference](docs/API_REFERENCE.md) | Actual routes, schemas, authentication, errors |
-| [Troubleshooting](docs/TROUBLESHOOTING.md) | Storage locks, ports, webhook 404, networking, model failures |
-| [Security and limitations](docs/SECURITY_AND_LIMITATIONS.md) | Local trust assumptions and production gaps |
-| [Licensing](docs/LICENSING.md) | Ownership confirmation and external dependency boundaries |
-
-## Limitations and future work
-
-The local intake webhook and UI are unauthenticated; the shared FastAPI token is a demo control. Compose binds n8n/Mailpit to loopback, while Docker-to-host FastAPI access requires an all-interface bind and host firewall protection. Do not expose this POC publicly.
-
-Laya can over-escalate, similarity is not entailment, and generated filename citations are not independently verified. Review means a review outcome was produced, not that a person acted on it. There is no booking system, real customer email, durable retry queue, distributed exactly-once guarantee, or measured production safety evaluation.
-
-Useful next steps are authenticated intake, independent citation/claim checking, measured decision/abstention evaluations, durable notification retries, explicit human approval, and server-based Qdrant when concurrency requires it. See the [security guide](docs/SECURITY_AND_LIMITATIONS.md) before extending deployment.
-
-Published without an application license at the owner's request. No third-party application source or model weights are included. See [licensing](docs/LICENSING.md).
+Ready to run it? Start with [Windows installation](docs/INSTALLATION_WINDOWS.md), then [running and testing](docs/RUNNING_AND_TESTING.md). The previous overview is preserved in the [project guide](docs/PROJECT_GUIDE.md).
