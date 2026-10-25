@@ -31,7 +31,7 @@ sequenceDiagram
     end
     N->>N: Choose review or answer branch
     N->>API: POST /api/notify with original result
-    API->>API: Validate request ID; check SQLite dedup
+    API->>API: Validate request ID and check SQLite dedup
     API->>M: SMTP notification if not already sent
     API-->>N: Notification outcome
     N-->>API: Original Process AI result
