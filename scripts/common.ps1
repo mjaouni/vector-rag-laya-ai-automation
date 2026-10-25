@@ -23,7 +23,7 @@ function Get-ProjectSettings {
     Assert-Python
     Push-Location $script:Root
     try {
-        $raw = & $script:Python -c 'import json; from service.config import settings; print(json.dumps({"token":settings.workflow_token,"webhook":settings.n8n_webhook_url}))'
+        $raw = & $script:Python -c "import json; from service.config import settings; print(json.dumps({'token':settings.workflow_token,'webhook':settings.n8n_webhook_url}))"
         if ($LASTEXITCODE -ne 0) { throw 'Cannot load project configuration.' }
         return ($raw | ConvertFrom-Json)
     } finally { Pop-Location }

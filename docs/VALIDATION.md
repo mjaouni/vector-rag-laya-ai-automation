@@ -10,7 +10,7 @@ Validated on **26 October 2026, Asia/Beirut**, with Python 3.12.2 on Windows. [T
 | Final offline suite | **24 passed**; last local run completed in 5.25 seconds |
 | Ruff (`F`, `E9`) | Passed for application, service, scripts, tests |
 | Python syntax, YAML, relative Markdown links | Passed through `scripts/validate_repo.py` |
-| PowerShell syntax | All `.ps1` files parsed with PowerShell's AST parser |
+| PowerShell syntax/compatibility | All `.ps1` files parsed with PowerShell's AST parser; configuration helper and new-token expression tested under Windows PowerShell 5.1 after fixing native-argument quoting |
 | Workflow JSON | Valid seven-node graph, inactive public import, three Header Auth HTTP nodes, no embedded credential values or local credential IDs |
 | Compose syntax | `docker compose -f docker/compose.yaml config --quiet` passed |
 | Publication hygiene | `scripts/check_publication.py` checked credential/key patterns, actual non-placeholder token values, personal paths, non-demo email addresses, runtime paths, model extensions, and large files; no findings |

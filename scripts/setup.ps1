@@ -12,7 +12,7 @@ try {
     if ($WithUI) { Invoke-Python -m pip install -r requirements-ui.txt }
     if (-not (Test-Path -LiteralPath '.env')) {
         Copy-Item -LiteralPath '.env.example' -Destination '.env'
-        Invoke-Python -c 'from pathlib import Path; import secrets; p=Path(".env"); p.write_text(p.read_text().replace("local-dev-only-change-me",secrets.token_urlsafe(32)),encoding="utf-8")'
+        Invoke-Python -c "from pathlib import Path; import secrets; p=Path('.env'); p.write_text(p.read_text().replace('local-dev-only-change-me',secrets.token_urlsafe(32)),encoding='utf-8')"
     }
     Write-Host 'Environment ready. Read .env locally; configure the same token in n8n Header Auth.'
     Write-Host 'Next: start Docker/Ollama, run scripts/seed.ps1, then scripts/start.ps1.'
